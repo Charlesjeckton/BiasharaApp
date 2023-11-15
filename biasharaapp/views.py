@@ -5,8 +5,8 @@ from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from requests.auth import HTTPBasicAuth
 
-from biasharaapp.forms import ProductsForm
-from biasharaapp.models import Member
+from biasharaapp.forms import ProductsForm, ImageUploadForm
+from biasharaapp.models import Member, ImageModel
 from biasharaapp.models import Products
 import requests
 from biasharaapp.credentials import MpesaC2bCredential, MpesaAccessToken, LipanaMpesaPpassword
@@ -122,7 +122,7 @@ def stk(request):
         access_token = MpesaAccessToken.validated_mpesa_access_token
         api_url = "https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest"
         headers = {"Authorization": "Bearer %s" % access_token}
-        request = {
+        lipana_request = {
             "BusinessShortCode": LipanaMpesaPpassword.Business_short_code,
             "Password": LipanaMpesaPpassword.decode_password,
             "Timestamp": LipanaMpesaPpassword.lipa_time,
@@ -135,5 +135,29 @@ def stk(request):
             "AccountReference": "Charles Enterprise",
             "TransactionDesc": "Web Development Charges"
         }
-        response = requests.post(api_url, json=request, headers=headers)
-        return HttpResponse(response)
+        response = requests.post(api_url, json=lipana_request, headers=headers)
+        return render(request, 'success.html')  # Render the success.html template
+
+    return HttpResponse('Invalid request method')
+
+
+def upload_image(request):
+    if request.method == 'POST':
+        form = ImageUploadForm(request.POST, request.FILES)
+        if form.is_valid():
+            form.save()
+            return redirect('/showimage')
+    else:
+        form = ImageUploadForm()
+    return render(request, 'upload_image.html', {'form': form})
+
+
+def show_image(request):
+    images = ImageModel.objects.all()
+    return render(request, 'show_image.html', {'images': images})
+
+
+def imagedelete(request, id):
+    image = ImageModel.objects.get(id=id)
+    image.delete()
+    return redirect('/showimage')
